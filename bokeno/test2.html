@@ -1,1 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>求人情報改善ツール</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .job-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .original-text {
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .action-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        select, input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 15px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result-area {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e9f5ff;
+            border: 1px solid #cce5ff;
+            border-radius: 5px;
+        }
+        .result-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <header>
+        <div>
+            <select>
+                <option>求人ID: 001 - 営業職</option>
+                <option>求人ID: 002 - Webデザイナー</option>
+                <option>求人ID: 003 - エンジニア</option>
+            </select>
+        </div>
+        <div class="job-title">営業職の募集</div>
+    </header>
+
+    <div class="section">
+        <div class="section-title">仕事内容</div>
+        <div class="original-text">
+            顧客リストに基づき、法人企業に電話やメールでアプローチします。自社製品の魅力を伝え、アポイントを取得することが主な業務です。
+        </div>
+        <div class="action-area">
+            <select onchange="handleSelect(this, 'work-content')">
+                <option value="default">選択してください</option>
+                <option value="gemini">① 記載内容をGeminiで改善する</option>
+                <option value=" 그대로">② そのまま使用する</option>
+            </select>
+        </div>
+        <div id="prompt-field-work-content" style="display: none; margin-top: 10px;">
+            <input type="text" placeholder="Geminiへの指示を入力" style="width: 70%;">
+            <button onclick="generateResult('work-content')">OK</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">求める人材</div>
+        <div class="original-text">
+            明るく元気に人と話せる方。未経験者歓迎です。営業に興味がある方はぜひご応募ください。
+        </div>
+        <div class="action-area">
+            <select onchange="handleSelect(this, 'ideal-candidate')">
+                <option value="default">選択してください</option>
+                <option value="gemini">① 記載内容をGeminiで改善する</option>
+                <option value="そのまま">② そのまま使用する</option>
+            </select>
+        </div>
+        <div id="prompt-field-ideal-candidate" style="display: none; margin-top: 10px;">
+            <input type="text" placeholder="Geminiへの指示を入力" style="width: 70%;">
+            <button onclick="generateResult('ideal-candidate')">OK</button>
+        </div>
+    </div>
+    
+    <div class="result-area">
+        <div class="result-title">改善結果</div>
+        <div id="final-result-display">
+            <p>ここにGeminiによる改善案や、元の内容が表示されます。</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    function handleSelect(selectElement, sectionId) {
+        const promptField = document.getElementById('prompt-field-' + sectionId);
+        if (selectElement.value === 'gemini') {
+            promptField.style.display = 'block';
+        } else {
+            promptField.style.display = 'none';
+            // 「そのまま使用する」が選択された場合の処理（仮）
+            if (selectElement.value === ' 그대로') {
+                const originalText = selectElement.closest('.section').querySelector('.original-text').innerText;
+                document.getElementById('final-result-display').innerHTML = '<p><strong>' + selectElement.closest('.section').querySelector('.section-title').innerText + '：</strong><br>' + originalText + '</p>';
+            }
+        }
+    }
+
+    function generateResult(sectionId) {
+        const inputPrompt = document.getElementById('prompt-field-' + sectionId).querySelector('input').value;
+        const originalText = document.getElementById('prompt-field-' + sectionId).closest('.section').querySelector('.original-text').innerText;
+        
+        // Geminiの回答を模倣する仮の処理
+        let geminiResponse = '';
+        if (sectionId === 'work-content') {
+            geminiResponse = '【Geminiによる改善案】<br>「単なるテレアポではなく、顧客の課題解決をサポートするコンサルティング営業として、法人企業の未来を一緒に創りませんか？電話やメールでのアプローチを通じて、当社の革新的な製品の価値を最大限に伝え、新たなビジネスチャンスを切り開いていきましょう。」';
+        } else if (sectionId === 'ideal-candidate') {
+            geminiResponse = '【Geminiによる改善案】<br>「経験は一切問いません。大切なのは、あなたの「やってみたい」という気持ちです。人と話すのが好きな方、新しいキャリアを築きたい方、成長意欲のある方を心から歓迎します。チームで支え合う温かい環境で、あなたの才能を開花させてください。」';
+        }
+
+        const resultDisplay = document.getElementById('final-result-display');
+        resultDisplay.innerHTML = '<p><strong>' + document.getElementById('prompt-field-' + sectionId).closest('.section').querySelector('.section-title').innerText + '：</strong><br>' + geminiResponse + '</p>';
+    }
+</script>
+
+</body>
+</html>
