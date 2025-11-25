@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>うふあがり島NaviChat! α版 - 基本メニュー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- 標準的な背景とフォントの設定 --- */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f7f9fb; /* ページ全体の背景を薄いグレーに */
+        }
+        
+        /* --- チャットコンテナ (9:16 縦長表示に修正) --- */
+        .chat-container { 
+            /* 9:16 縦長に修正 */
+            width: 90vw; /* 画面幅の90%を使用 */
+            max-width: 400px; /* デスクトップなどでの最大幅を制限 */
+            max-height: 90vh; /* 画面高さの90%までに制限 */
+            aspect-ratio: 9 / 16; /* 縦横比を9:16に固定 */
+
+            /* flex-direction: column; を使用して垂直レイアウトを維持 */
+            display: flex;
+            flex-direction: column;
+            
+            min-height: 300px; /* 最小の高さ */
+        }
+        
+        /* Chat log (the scrolling area) must grow to fill available space */
+        #chatLog {
+            flex-grow: 1; /* 残りの垂直スペースを埋める */
+            min-height: 100px; 
+        }
+
+        /* User の吹き出しスタイル */
+        .user-message { 
+            background-color: #fef3c7; 
+            color: #1e40af; 
+            border-radius: 2px 2px 2px 2px;
+            position: relative; 
+            margin-right: 15px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+        }
+        .user-message::after {
+            content: '';
+            position: absolute;
+            right: -15px; 
+            top: 10px; 
+            width: 0;
+            height: 0;
+            border-top: 10px solid transparent;
+            border-left: 15px solid #fef3c7; 
+            border-bottom: 10px solid transparent;
+        }
+
+        /* Gemini Bot の吹き出しスタイル */
+        .gemini-message { 
+            background-color: #dbeafe; 
+            color: #1f2937; 
+            border-radius: 2px 2px 2px 2px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+            white-space: pre-wrap; 
+            position: relative; 
+            margin-left: 15px; 
+        }
+        .gemini-message::before {
+            content: '';
+            position: absolute;
+            left: -15px; 
+            top: 10px; 
+            width: 0;
+            height: 0;
+            border-top: 10px solid transparent;
+            border-right: 15px solid #dbeafe; 
+            border-bottom: 10px solid transparent;
+        }
+
+        .link-card { background-color: #f0fdf4; border: 1px solid #d1fae5; }
+        
+        /* --- ローディングスピナーのCSS --- */
+        .loader {
+            border: 8px solid #f3f3f3; 
+            border-top: 8px solid #4f46e5; 
+            border-radius: 50%; 
+            width: 50px;
+            height: 50px;
+            -webkit-animation: spin 1.0s linear infinite; 
+            animation: spin 1.0s linear infinite;
+            margin: 0 auto;
+        }
+
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* --- ローディングスピナーのCSS End --- */
+
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+<!-- 背景オーバーレイは削除されました -->
+
+<!-- w-full クラスを削除し、サイズ制御をCSSの .chat-container に移譲 -->
+<div id="app" class="chat-container bg-white rounded-xl shadow-2xl p-6 mx-auto"> 
+    <h1 class="text-2xl font-bold text-center text-indigo-700 mb-6">うふあがり島NaviChat! α版</h1>
+    
+    <!-- タイトル下のキャッチコピー -->
+    <p id="catchCopy" class="text-sm text-center text-gray-500 mb-6">うふあがり島NaviChat! α版 へおじゃりやれ！<br>北大東について、なんでも聞いてください<br>知ってる範囲でお答えしますね～</p>
+
+    <!-- チャット表示エリア -->
+    <div id="chatLog" class="hidden overflow-y-auto space-y-4 p-3 mb-6 bg-gray-50 border border-gray-200 rounded-lg">
+        <!-- 会話ログがここに入る --></div>
+
+    <!-- メニューボタン表示エリア --><div id="menuButtons" class="grid grid-cols-2 gap-4">
+        <button onclick="handleMenuClick(1, '北大東を知る')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-5 rounded-lg transition duration-150 shadow-md">
+            北大東を知る
+        </button>
+        <button onclick="handleMenuClick(2, '北大東を楽しむ')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-5 rounded-lg transition duration-150 shadow-md">
+            北大東を楽しむ
+        </button>
+        <button onclick="handleMenuClick(3, '北大東でつながる')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-5 rounded-lg transition duration-150 shadow-md">
+            北大東でつながる
+        </button>
+        <button onclick="handleMenuClick(4, '北大東に行く')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-5 rounded-lg transition duration-150 shadow-md">
+            北大東に行く
+        </button>
+    </div>
+
+    <!-- 入力フォーム/送信エリア -->
+    <div id="inputArea" class="hidden space-x-3 mt-6">
+        
+        <!-- テキスト入力欄 (通常チャット用) -->
+        <input type="text" id="userInput" class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="質問内容、メニュー番号、または「M」を入力してください">
+        
+        <!-- 送信ボタン (チャット用) -->
+        <button id="sendButton" onclick="handleUserInput()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-150 shadow-md">
+            送信
+        </button>
+
+        <!-- フライト日程選択UI (dateSelectionArea) -->
+        <div id="dateSelectionArea" class="hidden w-full space-y-3 p-3 border border-gray-300 rounded-lg bg-gray-100/50">
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex-1">
+                    <label for="outboundDate" class="text-sm font-medium text-gray-700 block mb-1">往路日 (出発)</label>
+                    <input type="date" id="outboundDate" class="w-full p-2 border border-gray-300 rounded-md">
+                </div>
+                <div class="flex-1">
+                    <label for="inboundDate" class="text-sm font-medium text-gray-700 block mb-1">復路日 (帰路)</label>
+                    <input type="date" id="inboundDate" class="w-full p-2 border border-gray-300 rounded-md">
+                </div>
+            </div>
+            <button onclick="handleDateSubmit()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition duration-150 shadow-md mt-2">
+                フライトを検索
+            </button>
+        </div>
+        
+    </div>
+</div>
+
+<!-- ローディングオーバーレイ -->
+<div id="loadingOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 hidden flex items-center justify-center">
+    <div class="text-white text-center">
+        <!-- スピナーアニメーション: カスタムCSSのloaderクラスのみを使用 -->
+        <div class="loader mb-4"></div>
+        <p class="text-xl font-semibold" id="loadingText">メニュー準備中...</p>
+    </div>
+</div>
+
+<script>
+    // === API Configuration and Constants ===
+    const API_KEY = ""; 
+    const API_MODEL = "gemini-2.5-flash-preview-09-2025";
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${API_MODEL}:generateContent?key=${API_KEY}`;
+    const MAX_RETRIES = 5;
+
+    // === DOM Elements ===
+    const chatLog = document.getElementById('chatLog');
+    const userInput = document.getElementById('userInput');
+    const inputArea = document.getElementById('inputArea');
+    const menuButtons = document.getElementById('menuButtons');
+    const catchCopy = document.getElementById('catchCopy');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // 新しいフライト日程選択UI要素
+    const outboundDateInput = document.getElementById('outboundDate');
+    const inboundDateInput = document.getElementById('inboundDate');
+    const dateSelectionArea = document.getElementById('dateSelectionArea');
+    const sendButton = document.getElementById('sendButton');
+
+    // === External Links ===
+    const SKYSCANNER_BASE_URL = "https://www.skyscanner.jp/transport/flights/oka/ktd/";
+    const DAITO_KAIUN_URL = "https://daitoline.co.jp/";
+
+    // === State Management ===
+    let currentStep = 'mainMenu'; // 'mainMenu', 'knowKitadaito', 'enjoyKitadaito', 'transportSelect', 'confirmFlight', 'dateInput'
+
+    // === Constants for Display Text ===
+    const MAIN_MENU_CATCH_COPY_HTML = 'うふあがり島NaviChat! α版 へおじゃりやれ！<br>北大東について、なんでも聞いてください<br>知ってる範囲でお答えしますね～';
+
+
+    /**
+     * チャットモードとメニューモードを切り替える
+     */
+    function toggleChatMode(isChatting) {
+        if (isChatting) {
+            chatLog.classList.remove('hidden');
+            inputArea.classList.remove('hidden'); 
+            inputArea.classList.add('flex');      
+            menuButtons.classList.add('hidden');
+            menuButtons.classList.remove('grid');
+            
+            // デフォルトはチャット入力と送信ボタンを表示
+            dateSelectionArea.classList.add('hidden');
+            userInput.classList.remove('hidden');
+            sendButton.classList.remove('hidden');
+
+            // Catch copyを現在のステップに基づいて設定
+            let placeholderText = 'メッセージを入力するか、選択肢を入力してください。';
+            if (currentStep === 'knowKitadaito') {
+                placeholderText = '北大東島について質問を入力してください。';
+            } else if (currentStep === 'enjoyKitadaito') {
+                placeholderText = '観光、グルメ、イベントなど質問を入力してください。';
+            }
+            catchCopy.textContent = placeholderText; // チャットモードでは改行のないテキストを設定
+
+        } else {
+            chatLog.classList.add('hidden');
+            inputArea.classList.add('hidden');    
+            inputArea.classList.remove('flex');   
+            menuButtons.classList.remove('hidden');
+            menuButtons.classList.add('grid');
+            catchCopy.innerHTML = MAIN_MENU_CATCH_COPY_HTML; // メインメニューでは改行付きのHTMLを設定
+            chatLog.innerHTML = ''; 
+        }
+    }
+
+    /**
+     * 初期メニューを表示する (ボタン表示に変更)
+     */
+    function showMainMenu() {
+        currentStep = 'mainMenu';
+        toggleChatMode(false); // TOP画面モードに切り替え
+    }
+
+    /**
+     * メニューに戻る際のアニメーションシーケンスを実行する
+     */
+    function returnToMenuSequence() {
+        // 日付選択UIが表示されていたら非表示に戻す
+        dateSelectionArea.classList.add('hidden');
+        userInput.classList.remove('hidden');
+        sendButton.classList.remove('hidden');
+
+        // 1. Botがメッセージを表示
+        addMessage("それでは、メニュー戻りますね～♡", 'gemini');
+        
+        // 2. 2秒待機後、ローディング表示
+        setTimeout(() => {
+            // 3. ローディングアニメーションを表示
+            loadingOverlay.classList.remove('hidden');
+            
+            // 4. さらに2秒待機後、メニュー画面に戻る
+            setTimeout(() => {
+                // ローディングを非表示
+                loadingOverlay.classList.add('hidden');
+                
+                // 5. メインメニューに戻る
+                showMainMenu(); 
+            }, 2000); // 2秒待機
+        }, 2000); // 2秒待機
+    }
+
+    /**
+     * チャットログにメッセージを追加する
+     */
+    function addMessage(text, type) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex ${type === 'user' ? 'justify-end' : 'justify-start'}`;
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = `${type === 'user' ? 'user-message' : 'gemini-message'} p-3 max-w-xs`;
+        contentDiv.innerHTML = text;
+        
+        messageDiv.appendChild(contentDiv);
+        chatLog.appendChild(messageDiv);
+        
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+    
+    /**
+     * 引用元をHTML形式で整形する
+     */
+    function formatSources(sources) {
+        if (sources.length === 0) return "";
+        
+        let html = '<div class="mt-2 pt-2 border-t border-blue-300/50 text-xs text-blue-800">';
+        html += '<p class="font-semibold mb-1">情報源:</p>';
+        sources.slice(0, 3).forEach((source, index) => { // 最大3つに制限
+            const displayTitle = source.title.length > 30 ? source.uri.split('/')[2] : source.title;
+            html += `<a href="${source.uri}" target="_blank" class="block hover:underline truncate" title="${source.title}">・${displayTitle}</a>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    /**
+     * Gemini APIを呼び出して、北大東島に関する回答を取得する
+     */
+    async function fetchGeminiResponse(userQuery) {
+        const systemPrompt = "あなたは沖縄県・北大東島への旅行者や島民をサポートする親切で知識豊富なナビゲーターです。島の歴史、文化、観光スポット、交通、天気に関する質問に答えてください。回答は日本語で、フレンドリーなトーンで記述し、質問に正確に焦点を当ててください。情報源としてGoogle Searchの結果を参照し、引用元を抽出して表示してください。";
+
+        const payload = {
+            contents: [{ parts: [{ text: userQuery }] }],
+            tools: [{ "google_search": {} }],
+            systemInstruction: {
+                parts: [{ text: systemPrompt }]
+            },
+        };
+
+        let text = "情報を見つけることができませんでした。もう一度お試しください。";
+        let sources = [];
+        let lastError = null;
+
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    lastError = `HTTP Error: ${response.status} ${response.statusText}`;
+                    if (response.status === 429 && attempt < MAX_RETRIES - 1) {
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000 + Math.random() * 1000));
+                        continue; 
+                    }
+                    throw new Error(lastError);
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    text = candidate.content.parts[0].text;
+
+                    const groundingMetadata = candidate.groundingMetadata;
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        sources = groundingMetadata.groundingAttributions
+                            .map(attribution => ({
+                                uri: attribution.web?.uri,
+                                title: attribution.web?.title,
+                            }))
+                            .filter(source => source.uri && source.title);
+                    }
+                    return { text, sources }; 
+                } else {
+                    console.error("Gemini API response format invalid or content missing:", result);
+                    break;
+                }
+            } catch (error) {
+                lastError = error;
+                console.error(`Attempt ${attempt + 1} failed:`, error);
+                if (attempt < MAX_RETRIES - 1) {
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000 + Math.random() * 1000));
+                }
+            }
+        }
+
+        return { text: lastError ? `エラーが発生しました: ${lastError}` : "応答を取得できませんでした。", sources: [] };
+    }
+
+
+    /**
+     * メニューボタンクリック時のハンドラ
+     */
+    function handleMenuClick(menuNumber, menuText) {
+        toggleChatMode(true);
+        handleMainMenuInput(menuNumber.toString());
+    }
+
+    /**
+     * 【北大東に行く】メニューフロー - 交通手段の選択メニューを表示する
+     */
+    function kitadaitoGoMenu() {
+        currentStep = 'transportSelect';
+        userInput.placeholder = "AまたはBを入力";
+        const menuText = `北大東島へ行くには、飛行機と船の2通りがあります。どちらにしますか？
+
+A. 飛行機（琉球エアコミューター）でいく
+B. 船（大東海運）でいく
+
+AまたはBを入力してください。 (Mでメニューに戻る)`;
+        addMessage(menuText, 'gemini');
+    }
+
+    /**
+     * 交通手段A（飛行機）を選択後のフロー
+     */
+    function confirmFlightReservation() {
+        currentStep = 'confirmFlight';
+        userInput.placeholder = "AまたはMを入力";
+        const menuText = `飛行機では、那覇空港から北大東空港まで約１時間かかります。飛行機の予約（日程確認）に進みますか？
+
+A. はい（日程入力へ）
+M. メインメニューに戻る
+
+AまたはMを入力してください。`;
+        addMessage(menuText, 'gemini');
+    }
+
+    /**
+     * 交通手段B（船）を選択後のフロー
+     */
+    function showFerryLink() {
+        currentStep = 'mainMenu'; // リンク表示後はメインメニューに戻る
+        const linkHtml = `
+            <p>船では、那覇泊港から北大東島まで約15時間かかります。</p>
+            <p>船の予約（運行情報）については、下記大東海運のホームページをご確認ください。</p>
+            <div class="link-card p-3 rounded-lg mt-2">
+                <p class="text-sm font-semibold text-green-700 mb-2">大東海運 公式サイト</p>
+                <a href="${DAITO_KAIUN_URL}" target="_blank" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 rounded-md transition duration-150">
+                    大東海運のホームページへ
+                </a>
+            </div>
+        `;
+        addMessage(linkHtml, 'gemini');
+        setTimeout(showMainMenu, 2500); 
+    }
+    
+    /**
+     * フライト日程入力モードにする (カレンダー表示)
+     */
+    function enterDateInputMode() {
+        currentStep = 'dateInput';
+        // チャット入力UIを非表示
+        userInput.classList.add('hidden'); 
+        sendButton.classList.add('hidden');
+        // 日付選択UIを表示
+        dateSelectionArea.classList.remove('hidden'); 
+
+        addMessage("はい、承知いたしました。往路（出発）日と復路（帰路）日をカレンダーから選択し、「フライトを検索」ボタンを押してください。 (Mでメニューに戻る)", 'gemini');
+    }
+
+    /**
+     * 日付選択後の「フライトを検索」ボタンクリック時のハンドラ
+     */
+    function handleDateSubmit() {
+        const outboundDateStr = outboundDateInput.value;
+        const inboundDateStr = inboundDateInput.value;
+        
+        if (!outboundDateStr || !inboundDateStr) {
+            addMessage("往路日と復路日の両方を選択してください。", 'gemini');
+            return;
+        }
+
+        // 日付の妥当性チェック
+        const outboundDate = new Date(outboundDateStr);
+        const inboundDate = new Date(inboundDateStr);
+
+        // 時刻情報をクリアし、日付のみで比較
+        outboundDate.setHours(0, 0, 0, 0);
+        inboundDate.setHours(0, 0, 0, 0);
+
+        if (inboundDate <= outboundDate) {
+            addMessage("復路日は往路日よりも後の日付を選択してください。", 'gemini');
+            return;
+        }
+
+        // UIをチャットモードに戻す
+        dateSelectionArea.classList.add('hidden');
+        userInput.classList.remove('hidden');
+        sendButton.classList.remove('hidden');
+
+        // ユーザーの選択を表示 (チャットログに追加)
+        const displaySelection = `${outboundDateStr} (往路) から ${inboundDateStr} (復路) で検索`;
+        addMessage(displaySelection, 'user');
+
+        // フライト検索実行
+        searchFlight(outboundDateStr, inboundDateStr);
+    }
+
+    /**
+     * ユーザー入力の処理
+     */
+    async function handleUserInput() {
+        const input = userInput.value.trim().toUpperCase();
+        userInput.value = '';
+        
+        if (!input) {
+            return;
+        }
+
+        // --- M (メニューに戻る) の共通処理 ---
+        if (input === 'M') {
+            returnToMenuSequence();
+            return;
+        }
+        // --- M 共通処理ここまで ---
+        
+        // 日付入力モードでは「M」以外のチャット入力を無視する
+        if (currentStep === 'dateInput') {
+             addMessage("先にカレンダーで日付を選択し、「フライトを検索」ボタンを押してください。メインメニューに戻る場合は「M」を入力してください。", 'gemini');
+             return;
+        }
+
+        addMessage(input, 'user');
+
+        switch (currentStep) {
+            case 'mainMenu':
+                addMessage("メインメニューでは、上のメニューボタンから選択してください。", 'gemini');
+                toggleChatMode(false);
+                break;
+            
+            // 「北大東を知る」と「北大東を楽しむ」は同じチャットロジックを共有
+            case 'knowKitadaito':
+            case 'enjoyKitadaito': 
+                userInput.placeholder = "検索中...";
+                
+                // ローディングメッセージを追加
+                const loadingMessage = document.createElement('div');
+                loadingMessage.className = 'flex justify-start';
+                loadingMessage.innerHTML = '<div id="loading" class="gemini-message p-3 max-w-xs">検索中... <span class="animate-pulse">●●●</span></div>';
+                chatLog.appendChild(loadingMessage);
+                chatLog.scrollTop = chatLog.scrollHeight;
+                
+                const geminiResponse = await fetchGeminiResponse(input);
+                
+                // ローディングメッセージを削除
+                const loadingElement = document.getElementById('loading');
+                if (loadingElement) {
+                    loadingElement.parentNode.remove();
+                }
+
+                const responseHtml = geminiResponse.text + formatSources(geminiResponse.sources);
+                addMessage(responseHtml, 'gemini');
+                
+                const followUpPrompt = currentStep === 'knowKitadaito' 
+                    ? "他に北大東島について知りたいことはありますか？ (質問を入力するか、Mでメニューに戻る)"
+                    : "他に北大東島で楽しむための情報はありますか？ (質問を入力するか、Mでメニューに戻る)";
+                    
+                addMessage(followUpPrompt, 'gemini');
+                userInput.placeholder = "質問を入力するか、Mでメニューに戻る";
+                
+                break; 
+
+            case 'transportSelect':
+                // Mは共通処理で捕捉されるため、ここではA/Bのみ処理
+                if (input === 'A') {
+                    confirmFlightReservation();
+                } else if (input === 'B') {
+                    showFerryLink();
+                } else {
+                    addMessage("無効な入力です。AまたはBで入力してください。", 'gemini');
+                }
+                break;
+
+            case 'confirmFlight':
+                // Mは共通処理で捕捉されるため、ここではAのみ処理
+                if (input === 'A') {
+                    enterDateInputMode();
+                } else {
+                    addMessage("無効な入力です。Aで入力してください。", 'gemini');
+                }
+                break;
+
+            // 'dateInput' ステップは handleDateSubmit() に処理を移譲
+
+            default:
+                addMessage("予期せぬエラーが発生しました。メインメニューに戻ります。", 'gemini');
+                showMainMenu();
+                break;
+        }
+    }
+
+    function handleMainMenuInput(input) {
+        switch (input) {
+            case '1':
+                currentStep = 'knowKitadaito'; 
+                userInput.placeholder = "知りたいことを入力してください";
+                addMessage("北大東ナビです！島について知りたいことを質問してくださいね。例：島の歴史は？、観光スポットはどこ？など (Mでメニューに戻る)", 'gemini'); 
+                break;
+            case '2': 
+                currentStep = 'enjoyKitadaito'; 
+                userInput.placeholder = "観光、グルメ、イベントなど質問を入力してください";
+                addMessage("北大東島で楽しむための情報ですね！観光スポット、イベント、グルメなど、何でも聞いてください。 (Mでメニューに戻る)", 'gemini');
+                break;
+            case '3':
+                addMessage(`北大東島で人や情報とつながるための情報ですね！申し訳ございません、この機能は現在準備中です。SNS連携や掲示板機能などを実装予定ですので、しばらくお待ちください。`, 'gemini');
+                setTimeout(showMainMenu, 4000);
+                break;
+            case '4':
+                kitadaitoGoMenu();
+                break;
+            default:
+                addMessage("無効な入力です。1〜4の番号で入力してください。", 'gemini');
+                break;
+        }
+    }
+
+    /**
+     * ユーザー入力に基づきフライト検索を行い、リンクを生成する
+     * @param {string} outboundDateStr - YYYY-MM-DD 形式の往路日
+     * @param {string} inboundDateStr - YYYY-MM-DD 形式の復路日
+     */
+    function searchFlight(outboundDateStr, inboundDateStr) {
+        if (!outboundDateStr || !inboundDateStr) {
+            addMessage("システムエラー: 日付が設定されていません。", 'gemini');
+            showMainMenu();
+            return;
+        }
+
+        try {
+            const outboundDateObj = new Date(outboundDateStr);
+            const inboundDateObj = new Date(inboundDateStr);
+
+            // 表示用日付フォーマット
+            const formattedOutboundDate = new Intl.DateTimeFormat('ja-JP', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            }).format(outboundDateObj);
+            const formattedInboundDate = new Intl.DateTimeFormat('ja-JP', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            }).format(inboundDateObj);
+            
+            // スカイスキャナー用日付フォーマット (YYMMDD)
+            const formatForSkyscanner = (dateObj) => {
+                const year = String(dateObj.getFullYear()).slice(2);
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                return year + month + day;
+            };
+
+            const skyscannerOutboundDate = formatForSkyscanner(outboundDateObj);
+            const skyscannerInboundDate = formatForSkyscanner(inboundDateObj);
+            
+            // URL生成
+            const skyscannerUrl = `${SKYSCANNER_BASE_URL}${skyscannerOutboundDate}/${skyscannerInboundDate}/?adultsv2=1&cabinclass=economy&ref=home&rtn=1`;
+
+            const linkHtml = `
+                <div class="link-card p-3 rounded-lg mt-2">
+                    <p class="text-sm font-semibold text-green-700 mb-2">那覇 ⇔ 北大東 フライト検索</p>
+                    <p class="text-xs text-gray-700 mb-2">往路: ${formattedOutboundDate} / 復路: ${formattedInboundDate}</p>
+                    <a href="${skyscannerUrl}" target="_blank" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 rounded-md transition duration-150">
+                        スカイスキャナーで確認（外部サイト）
+                    </a>
+                </div>
+            `;
+
+            addMessage(`
+                <p class="font-semibold text-indigo-800">フライト検索リンクを生成しました。</p>
+                <p>選択された日程で那覇 ⇔ 北大東路線のフライトをご確認ください。</p>
+                ${linkHtml}
+            `, 'gemini');
+
+        } catch (e) {
+            addMessage("日付の処理中にエラーが発生しました。メインメニューに戻ります。", 'gemini');
+            console.error(e);
+        }
+        
+        // 日付入力フィールドをリセット
+        outboundDateInput.value = '';
+        inboundDateInput.value = '';
+        currentStep = 'mainMenu'; // 検索後はメインメニューに戻ったと見なす
+        
+        // 5秒後にチャット続行を促す
+        setTimeout(() => {
+            addMessage("他にも何かお探しですか？ (質問を入力するか、Mでメニューに戻る)", 'gemini');
+            userInput.placeholder = "質問を入力するか、Mでメニューに戻る";
+        }, 5000); 
+    }
+    
+    // グローバルスコープに関数を公開
+    window.handleMenuClick = handleMenuClick;
+    window.handleDateSubmit = handleDateSubmit;
+
+    // エンターキーで送信
+    userInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleUserInput();
+        }
+    });
+
+    // アプリ起動時にメインメニューを表示
+    window.onload = showMainMenu;
+</script>
+
+</body>
+</html>
