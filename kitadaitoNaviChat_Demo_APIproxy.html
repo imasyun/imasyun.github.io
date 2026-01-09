@@ -1,1 +1,619 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>うふあがり島NaviChat! α版 (診断機能付き)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* --- Base Styles --- */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f0f4f8;
+            margin: 0; padding: 0;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh;
+        }
+        
+        .chat-container { 
+            width: 100%; max-width: 400px; height: 100vh; max-height: 800px;
+            background-color: #ffffff; display: flex; flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; overflow: hidden;
+        }
 
+        .chat-header {
+            background-color: #4f46e5; color: white; padding: 1rem;
+            text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10;
+        }
+
+        #chatLog {
+            flex-grow: 1; overflow-y: auto; padding: 1rem;
+            background-color: #f9fafb; scroll-behavior: smooth;
+        }
+
+        /* --- Messages --- */
+        .user-message { 
+            background-color: #e0e7ff; color: #1e3a8a;
+            border-radius: 12px 12px 0 12px; padding: 10px 14px;
+            font-size: 0.95rem; margin-left: auto; max-width: 85%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin-bottom: 4px;
+        }
+
+        .gemini-message { 
+            background-color: #ffffff; color: #374151;
+            border: 1px solid #e5e7eb; border-radius: 12px 12px 12px 0; 
+            padding: 10px 14px; font-size: 0.95rem; white-space: pre-wrap; 
+            margin-right: auto; max-width: 90%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .bot-icon {
+            width: 32px; height: 32px; background-color: #4f46e5;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; margin-right: 8px; flex-shrink: 0; font-size: 0.8rem;
+        }
+
+        .message-row { display: flex; margin-bottom: 1rem; align-items: flex-start; }
+        .user-row { justify-content: flex-end; }
+
+        /* --- Diagnosis Buttons --- */
+        .diag-btn {
+            display: block; width: 100%; text-align: left;
+            margin-top: 8px; padding: 8px 12px;
+            background-color: #f3f4f6; border: 1px solid #d1d5db;
+            border-radius: 8px; color: #1f2937; font-size: 0.9rem;
+            transition: all 0.2s; cursor: pointer;
+        }
+        .diag-btn:hover { background-color: #e0e7ff; border-color: #818cf8; color: #4338ca; }
+        .diag-btn:active { transform: scale(0.98); }
+
+        /* --- Link Card --- */
+        .link-card { 
+            background-color: #f0fdf4; border: 1px solid #bbf7d0; 
+            border-radius: 8px; margin-top: 8px; padding: 10px;
+        }
+
+        /* --- Loaders --- */
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; 
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1.0s linear infinite; margin: 0 auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Markdown-ish Styles */
+        .gemini-message h3, .gemini-message strong { color: #4f46e5; font-weight: bold; }
+        .gemini-message ul { list-style-type: disc; margin-left: 1.2em; }
+        .gemini-message a { color: #2563eb; text-decoration: underline; }
+        
+        /* Grounding Source Styles */
+        .source-chips {
+            display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;
+            border-top: 1px solid #f3f4f6; padding-top: 8px;
+        }
+        .source-chip {
+            font-size: 0.7rem; background-color: #f3f4f6; color: #6b7280;
+            padding: 2px 8px; border-radius: 12px; text-decoration: none;
+            display: inline-flex; align-items: center; transition: background-color 0.2s;
+        }
+        .source-chip:hover { background-color: #e5e7eb; color: #374151; }
+        .source-chip i { margin-right: 4px; font-size: 0.6rem; }
+    </style>
+</head>
+<body>
+
+<div id="app" class="chat-container"> 
+    <header class="chat-header">
+        <h1 class="text-lg font-bold">うふあがり島NaviChat! <span class="text-xs font-normal bg-white/20 px-2 py-0.5 rounded-full">α版</span></h1>
+    </header>
+    
+    <div id="menuContainer" class="flex flex-col items-center justify-center space-y-6 h-full bg-white">
+        <div class="text-center space-y-2 mb-4 px-4">
+            <h2 class="text-xl font-bold text-gray-800">うふあがり島へ おじゃりやれ！</h2>
+            <p class="text-sm text-gray-600">北大東島について、なんでも聞いてください。<br>知っている範囲でお答えします。</p>
+        </div>
+
+        <div class="grid grid-cols-1 w-full gap-4 px-6 max-w-sm">
+            <button onclick="handleMenuClick(1, '北大東を知る')" class="flex items-center p-4 bg-white border border-indigo-100 rounded-xl shadow-sm hover:bg-indigo-50 transition group">
+                <div class="bg-indigo-100 text-indigo-600 p-3 rounded-full mr-4 group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fas fa-book-open"></i></div>
+                <div class="text-left"><span class="block font-bold text-gray-800">北大東を知る</span><span class="text-xs text-indigo-600 font-bold">歴史、自然、文化、生活</span></div>
+            </button>
+            <button onclick="handleMenuClick(2, '北大東を楽しむ')" class="flex items-center p-4 bg-white border border-indigo-100 rounded-xl shadow-sm hover:bg-indigo-50 transition group">
+                <div class="bg-indigo-100 text-indigo-600 p-3 rounded-full mr-4 group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fas fa-camera-retro"></i></div>
+                <div class="text-left"><span class="block font-bold text-gray-800">北大東を楽しむ</span><span class="text-xs text-indigo-600 font-bold">観光、アクティビティ、イベント、グルメ</span></div>
+            </button>
+            <button onclick="handleMenuClick(3, '北大東でつながる')" class="flex items-center p-4 bg-white border border-indigo-100 rounded-xl shadow-sm hover:bg-indigo-50 transition group">
+                <div class="bg-indigo-100 text-indigo-600 p-3 rounded-full mr-4 group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fas fa-users"></i></div>
+                <div class="text-left"><span class="block font-bold text-gray-800">北大東でつながる</span><span class="text-xs text-indigo-600 font-bold">★ 移住・定住診断</span></div>
+            </button>
+            <button onclick="handleMenuClick(4, '北大東に行く')" class="flex items-center p-4 bg-white border border-indigo-100 rounded-xl shadow-sm hover:bg-indigo-50 transition group">
+                <div class="bg-indigo-100 text-indigo-600 p-3 rounded-full mr-4 group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fas fa-plane-departure"></i></div>
+                <div class="text-left"><span class="block font-bold text-gray-800">北大東に行く</span><span class="text-xs text-indigo-600 font-bold">飛行機・貨客船を検索</span></div>
+            </button>
+        </div>
+    </div>
+
+    <div id="chatInterface" class="hidden flex-col flex-grow w-full h-full overflow-hidden">
+        <div class="bg-white border-b border-gray-100 p-2 flex justify-between items-center text-xs text-gray-500 px-4">
+            <span id="currentModeDisplay">モード: 情報検索</span>
+            <button onclick="returnToMenuSequence()" class="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center">
+                <i class="fas fa-home mr-1"></i>メニューへ
+            </button>
+        </div>
+
+        <div id="chatLog"></div>
+
+        <div id="inputAreaWrapper" class="bg-white p-4 border-t border-gray-200">
+            <div id="textInputContainer" class="flex w-full gap-2">
+                <input type="text" id="userInput" class="flex-grow p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="質問を入力...">
+                <button onclick="handleUserInput()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg flex-shrink-0"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            
+            <div id="diagnosisInputMask" class="hidden text-center text-sm text-gray-400 py-2">
+                <i class="fas fa-lock mr-1"></i>選択肢から回答を選んでください
+            </div>
+
+            <div id="dateSelectionArea" class="hidden w-full flex-col gap-3">
+                <p class="text-sm font-bold text-gray-700">日程を選択してください</p>
+                <div class="flex gap-2">
+                    <input type="date" id="outboundDate" class="flex-1 p-2 border border-gray-300 rounded-md text-sm">
+                    <input type="date" id="inboundDate" class="flex-1 p-2 border border-gray-300 rounded-md text-sm">
+                </div>
+                <button onclick="handleDateSubmit()" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg text-sm">フライトを検索</button>
+                <button onclick="cancelDateSelection()" class="w-full bg-gray-200 text-gray-700 text-xs py-2 rounded-lg">キャンセル</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="fixed inset-0 bg-white/90 z-50 hidden flex flex-col items-center justify-center">
+    <div class="loader mb-4"></div>
+    <p class="text-indigo-800 font-semibold animate-pulse" id="loadingText">メニューに戻っています...</p>
+</div>
+
+<script>
+    // === API & Config ===
+    // ⚠️ 注意: ここにGoogle GeminiのAPIキーを入力しないと、チャット機能は動作しません
+    const apiKey = ""; 
+    const API_MODEL = "gemini-2.0-flash-exp"; // モデル名は適宜変更してください (例: gemini-1.5-flash)
+    const API_URL = `https://ufuagarijimanavichat-api-proxy-19011109772.asia-northeast1.run.app/;
+
+    // === Constants (診断用データ) ===
+    const LEVEL_QUESTIONS = [
+        { id: 1, text: "「北大東島」という名前を聞いたことはありますか？", options: [{ label: "知らない/興味ない", score: 0 }, { label: "聞いたことはある", score: 2 }, { label: "沖縄の離島だと知っている", score: 5 }] },
+        { id: 2, text: "YouTubeやSNSで島の様子を見たことはありますか？", options: [{ label: "ない", score: 0 }, { label: "たまに見る", score: 3 }, { label: "よく見ている", score: 5 }] },
+        { id: 3, text: "固有種「ダイトウオオコウモリ」を知っていますか？", options: [{ label: "知らない", score: 0 }, { label: "名前は知っている", score: 3 }, { label: "詳しく知っている", score: 5 }] },
+        { id: 4, text: "島への交通手段や費用を調べたことはありますか？", options: [{ label: "ない", score: 0 }, { label: "なんとなく見た", score: 5 }, { label: "詳細に調べた", score: 8 }] },
+        { id: 5, text: "実際に北大東島に行ったことはありますか？", options: [{ label: "ない", score: 0 }, { label: "観光で1回", score: 6 }, { label: "複数回ある", score: 8 }] },
+        { id: 6, text: "島での生活や仕事を具体的に考えたことは？", options: [{ label: "ない", score: 0 }, { label: "憧れはある", score: 5 }, { label: "具体的に調べた", score: 8 }] },
+        { id: 7, text: "島の特産品（じゃがいも等）を購入したことは？", options: [{ label: "ない", score: 0 }, { label: "ある", score: 6 }, { label: "定期的に買っている", score: 8 }] },
+        { id: 8, text: "「地域おこし協力隊」や体験移住に応募しましたか？", options: [{ label: "していない", score: 0 }, { label: "検討・資料請求した", score: 7 }, { label: "応募・参加中", score: 10 }] },
+        { id: 9, text: "移住に向けた具体的な準備（住居・仕事）は？", options: [{ label: "していない", score: 0 }, { label: "情報収集中", score: 8 }, { label: "契約・手続き中", score: 10 }] },
+        { id: 10, text: "現在、北大東島に住んでいますか？", options: [{ label: "いいえ", score: 0 }, { label: "最近移住した", score: 15 }, { label: "定住している", score: 20 }] },
+    ];
+    const RIASEC_QUESTIONS = [
+        { type: 'R', text: "機械の修理や、農作業など、体を動かして道具を使う作業は好きですか？" },
+        { type: 'I', text: "「なぜそうなるのか？」島の自然や歴史の理由を深く調べたり分析するのが好きですか？" },
+        { type: 'A', text: "既存のルールにとらわれず、新しいアイデアや表現で人を感動させたいですか？" },
+        { type: 'S', text: "困っている人がいたら手助けし、地域の人と積極的に交流するのが好きですか？" },
+        { type: 'E', text: "自ら目標を立て、周囲を巻き込んでリーダーシップを発揮するのは得意ですか？" },
+        { type: 'C', text: "決まった手順やルールを尊重し、計画通りに着実に物事を進めるのが得意ですか？" },
+    ];
+    const LEVEL_DEFINITIONS = [
+        { level: 1, name: "認識", min: 0, max: 15, desc: "まずは島のことを知ることから始めましょう！" },
+        { level: 2, name: "興味", min: 16, max: 35, desc: "島への興味が高まっています。観光を検討してみては？" },
+        { level: 3, name: "体験", min: 36, max: 55, desc: "実際の空気に触れてみましょう。体験移住などがおすすめ。" },
+        { level: 4, name: "準備", min: 56, max: 75, desc: "かなり具体的ですね。移住に向けた準備を進めましょう。" },
+        { level: 5, name: "定着", min: 76, max: 999, desc: "すでに島の一員、またはそれに近い状態です！" },
+    ];
+    const PHASE_DEFINITIONS = {
+        phase1: { id: 'phase1', name: "第1段階：定住・協調", types: ['S', 'C', 'R'], desc: "コミュニティの一員として、地域の和を大切にしながら生活基盤を築く役割。" },
+        phase2: { id: 'phase2', name: "第2段階：産業・実践", types: ['R', 'E', 'S'], desc: "島の産業（農業・漁業）を支え、課題解決に向けて実務を推進する役割。" },
+        phase3: { id: 'phase3', name: "第3段階：未来・創造", types: ['E', 'I', 'A'], desc: "新しい視点で島の魅力を発掘し、未来の事業や価値を創造するリーダー。" }
+    };
+    const ACTION_SUGGESTIONS = {
+        interest: {
+            phase1: { title: "🤝 島人との「ゆんたく」観光", detail: "観光で訪れた際、商店や居酒屋で地元の人と積極的に話してみましょう。" },
+            phase2: { title: "🚜 産業・インフラ見学ツアー", detail: "製糖工場や漁港を巡り、島がどう成り立っているか観察してみましょう。" },
+            phase3: { title: "📸 島の魅力発掘・発信旅", detail: "まだ知られていない絶景を探し、あなたの視点でSNS発信してみましょう。" }
+        },
+        experience: {
+            phase1: { title: "🏠 体験移住で「協調性」を試す", detail: "短期間の暮らし体験プログラムを利用し、地域コミュニティに馴染めるか確認しましょう。" },
+            phase2: { title: "💪 サトウキビ収穫・援農に参加", detail: "製糖工場アルバイトなどに挑戦。島の産業を支える一員としての手応えを感じましょう。" },
+            phase3: { title: "💻 ワーケーションで「新規事業」を構想", detail: "PCを持ち込んで滞在し、自分のスキルで何が解決できるか企画書にまとめてみましょう。" }
+        },
+        settlement: {
+            phase1: { title: "🎉 自治会・行事のキーマンになる", detail: "豊年祭や地域行事の運営に携わり、新旧住民の架け橋となりましょう。" },
+            phase2: { title: "⚙️ 産業の担い手・技術継承", detail: "農業や漁業の現場で、次世代に産業をつなぐリーダーとしての活躍が期待されます。" },
+            phase3: { title: "🚀 島発ベンチャー・起業", detail: "特産品のブランド化など、島のリソースを活用して新しい雇用を生み出してください。" }
+        }
+    };
+
+    // === State Management ===
+    let currentStep = 'mainMenu'; // knowKitadaito, diagnosis, transportSelect...
+    let diagState = {
+        step: 'idle', // level_q, riasec_q
+        qIndex: 0,
+        levelScore: 0,
+        riasecScores: { R:0, I:0, A:0, S:0, E:0, C:0 },
+        userLevel: null
+    };
+
+    // === DOM Elements ===
+    const menuContainer = document.getElementById('menuContainer');
+    const chatInterface = document.getElementById('chatInterface');
+    const chatLog = document.getElementById('chatLog');
+    const userInput = document.getElementById('userInput');
+    const textInputContainer = document.getElementById('textInputContainer');
+    const diagnosisInputMask = document.getElementById('diagnosisInputMask');
+    const dateSelectionArea = document.getElementById('dateSelectionArea');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const currentModeDisplay = document.getElementById('currentModeDisplay');
+
+    // === UI Functions ===
+    function toggleChatMode(isChatting, modeName = "", isDiagnosis = false) {
+        if (isChatting) {
+            menuContainer.classList.add('hidden');
+            chatInterface.classList.remove('hidden');
+            chatInterface.classList.add('flex');
+            
+            // 入力エリア制御
+            if (isDiagnosis) {
+                textInputContainer.classList.add('hidden');
+                diagnosisInputMask.classList.remove('hidden');
+            } else {
+                textInputContainer.classList.remove('hidden');
+                diagnosisInputMask.classList.add('hidden');
+            }
+            dateSelectionArea.classList.add('hidden');
+            userInput.value = '';
+            
+            if(modeName) currentModeDisplay.textContent = `モード: ${modeName}`;
+        } else {
+            chatInterface.classList.add('hidden');
+            chatInterface.classList.remove('flex');
+            menuContainer.classList.remove('hidden');
+            chatLog.innerHTML = ''; 
+        }
+    }
+
+    function addMessage(text, type, options = null) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = `message-row ${type === 'user' ? 'user-row' : 'gemini-row'}`;
+        
+        if (type === 'gemini') {
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'bot-icon';
+            iconDiv.innerHTML = '<i class="fas fa-robot"></i>';
+            rowDiv.appendChild(iconDiv);
+        }
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = type === 'user' ? 'user-message' : 'gemini-message';
+        contentDiv.innerHTML = text;
+
+        // 診断用ボタン（オプション）の追加
+        if (options && type === 'gemini') {
+            options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'diag-btn';
+                btn.textContent = opt.label;
+                btn.onclick = () => handleDiagnosisOption(opt); 
+                contentDiv.appendChild(btn);
+            });
+        }
+        
+        rowDiv.appendChild(contentDiv);
+        chatLog.appendChild(rowDiv);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function returnToMenuSequence() {
+        loadingOverlay.classList.remove('hidden');
+        setTimeout(() => {
+            currentStep = 'mainMenu';
+            toggleChatMode(false);
+            loadingOverlay.classList.add('hidden');
+        }, 800);
+    }
+
+    // === Menu Handlers ===
+    function handleMenuClick(menuNumber, menuText) {
+        if (menuNumber === 3) {
+            // 診断モード開始
+            currentStep = 'diagnosis';
+            toggleChatMode(true, menuText, true);
+            startDiagnosis();
+        } else {
+            // 通常チャットモード
+            currentStep = menuNumber === 1 ? 'knowKitadaito' : (menuNumber === 2 ? 'enjoyKitadaito' : 'transportSelect');
+            toggleChatMode(true, menuText, false);
+            
+            if (menuNumber === 1) addMessage("北大東島の歴史や自然、文化、島での生活など知りたいことを質問してください。", 'gemini');
+            else if (menuNumber === 2) addMessage("北大東島を楽しむための情報ですね！　観光スポットやアクティビティ、イベント、グルメについて知りたいことを質問してください。", 'gemini');
+            else if (menuNumber === 4) showTransportOptions();
+        }
+    }
+
+    // === Diagnosis Logic ===
+    function startDiagnosis() {
+        diagState = {
+            step: 'level_q',
+            qIndex: 0,
+            levelScore: 0,
+            riasecScores: { R:0, I:0, A:0, S:0, E:0, C:0 },
+            userLevel: null
+        };
+        addMessage("うふあがり島（北大東島）へようこそ！🏝️\n私は移住・定住コンシェルジュです。\n\nまずは、あなたが現在どのくらい北大東島と関わりがあるか、簡単な診断でチェックしてみましょう。", 'gemini', [{ label: "スタート！", action: "next_q" }]);
+    }
+
+    function handleDiagnosisOption(opt) {
+        // ユーザーの回答を表示
+        addMessage(opt.label, 'user');
+
+        if (diagState.step === 'level_q') {
+            // レベル診断中
+            if (opt.action === 'next_q') { 
+                // スタートボタン
+                askLevelQuestion(0);
+                return;
+            }
+            
+            // スコア加算
+            diagState.levelScore += opt.score;
+            
+            if (diagState.qIndex < LEVEL_QUESTIONS.length - 1) {
+                diagState.qIndex++;
+                setTimeout(() => askLevelQuestion(diagState.qIndex), 400);
+            } else {
+                finishLevelDiagnosis();
+            }
+
+        } else if (diagState.step === 'riasec_q') {
+            // RIASEC診断中
+             if (opt.action === 'start_riasec') {
+                diagState.qIndex = 0;
+                askRiasecQuestion(0);
+                return;
+             }
+             if (opt.action === 'end_diagnosis') {
+                 // 診断終了してメニューへ
+                 returnToMenuSequence();
+                 return;
+             }
+
+             // RIASECスコア加算
+             diagState.riasecScores[opt.type] += opt.score;
+
+             if (diagState.qIndex < RIASEC_QUESTIONS.length - 1) {
+                 diagState.qIndex++;
+                 setTimeout(() => askRiasecQuestion(diagState.qIndex), 400);
+             } else {
+                 finishRiasecDiagnosis();
+             }
+        }
+    }
+
+    function askLevelQuestion(index) {
+        const q = LEVEL_QUESTIONS[index];
+        addMessage(`Q${index + 1}. ${q.text}`, 'gemini', q.options);
+    }
+
+    function finishLevelDiagnosis() {
+        const total = diagState.levelScore;
+        const levelObj = LEVEL_DEFINITIONS.find(l => total <= l.max) || LEVEL_DEFINITIONS[4];
+        diagState.userLevel = levelObj;
+        
+        let msg = `診断結果が出ました。\nあなたの関わりレベルは...\n\n🎉 **レベル${levelObj.level}：${levelObj.name}** です。\n(${levelObj.desc})`;
+        
+        // レベル判定後：RIASECへ進むか終了か
+        if (levelObj.level <= 1) {
+            msg += "\n\nまだ島のことを知る段階ですね。まずは「北大東を知る」メニューで島の魅力に触れてみてください。";
+            setTimeout(() => addMessage(msg, 'gemini', [{ label: "メニューに戻る", action: "end_diagnosis", type: "end" }]), 600);
+            diagState.step = 'riasec_q'; // 便宜上設定（ボタンハンドラ用）
+        } else {
+            msg += "\n\n続いて、もしあなたが島に関わるとしたら、**「どのような役割が向いているか」**（RIASEC適性）を診断してみませんか？";
+            setTimeout(() => addMessage(msg, 'gemini', [{ label: "適性を診断する", action: "start_riasec" }]), 600);
+            diagState.step = 'riasec_q';
+        }
+    }
+
+    function askRiasecQuestion(index) {
+        const q = RIASEC_QUESTIONS[index];
+        const options = [
+            { label: "とてもそう思う", score: 2, type: q.type },
+            { label: "少しそう思う", score: 1, type: q.type },
+            { label: "思わない", score: 0, type: q.type },
+        ];
+        addMessage(`Q${index + 1}. ${q.text}`, 'gemini', options);
+    }
+
+    function finishRiasecDiagnosis() {
+        // フェーズ計算
+        const s = diagState.riasecScores;
+        const p1 = s.S + s.C + s.R;
+        const p2 = s.R + s.E + s.S;
+        const p3 = s.E + s.I + s.A;
+        
+        let resultPhase = PHASE_DEFINITIONS.phase1;
+        let max = p1;
+        if (p2 > max) { max = p2; resultPhase = PHASE_DEFINITIONS.phase2; }
+        if (p3 > max) { max = p3; resultPhase = PHASE_DEFINITIONS.phase3; }
+
+        // マトリクス提案取得
+        let levelKey = 'interest'; // default Level 1-2
+        if (diagState.userLevel.level >= 5) levelKey = 'settlement';
+        else if (diagState.userLevel.level >= 3) levelKey = 'experience';
+        
+        const suggestion = ACTION_SUGGESTIONS[levelKey][resultPhase.id];
+
+        const finalMsg = `診断完了です。お疲れ様でした。\n\nあなたは... **【${resultPhase.name}】** タイプです。\n\n${resultPhase.desc}\n\n📊 **あなたへの提案**\n現在の関わりレベル「${diagState.userLevel.name}」と合わせると、次の一歩はこれです。\n\n**💡 ${suggestion.title}**\n${suggestion.detail}`;
+        
+        setTimeout(() => {
+            addMessage(finalMsg, 'gemini', [{ label: "メニューに戻る", action: "end_diagnosis" }]);
+        }, 600);
+    }
+
+
+    // === Transport Logic (Menu 4) ===
+    function showTransportOptions() {
+        addMessage(`北大東島へ行くには、飛行機と船の2通りがあります。どちらにしますか？<div class="mt-3 space-y-2"><button onclick="handleTransportChoice('A')" class="w-full text-left p-2 border rounded hover:bg-gray-50 text-indigo-700 font-bold">A. 飛行機（琉球エアコミューター RAC）でいく<img src="https://rac-okinawa.com/wp-content/themes/rac-okinawa/assets/img/profile/img-dhc-8-q400cc.jpg" alt="DHC-8-400カーゴコンビ"></button><button onclick="handleTransportChoice('B')" class="w-full text-left p-2 border rounded hover:bg-gray-50 text-green-700 font-bold">B. 貨客船「だいとう」(大東海運)でいく<img src="https://daitoline.co.jp/daitolinehp/wp-content/uploads/2022/01/daitoukotei02-1.jpg" alt="貸客船「だいとう」" width="" height="" /></button>
+            </div>`, 'gemini');
+    }
+
+    function handleTransportChoice(choice) {
+        if (choice === 'A') {
+            addMessage("飛行機ですね。日程検索を行いますか？", 'gemini');
+            setTimeout(() => {
+                textInputContainer.classList.add('hidden');
+                dateSelectionArea.classList.remove('hidden');
+            }, 500);
+        } else {
+            addMessage(`貨客船は那覇泊港から約15時間かかります。<br><a href="https://daitoline.co.jp/" target="_blank" class="text-green-600 underline">大東海運 公式サイト</a>`, 'gemini');
+        }
+    }
+    
+    // Skyscanner Integration
+    function handleDateSubmit() {
+        const outbound = document.getElementById('outboundDate').value; // YYYY-MM-DD
+        const inbound = document.getElementById('inboundDate').value;   // YYYY-MM-DD
+
+        if (!outbound) {
+            addMessage("出発日を選択してください。", 'gemini');
+            return;
+        }
+
+        // Convert Date Format (YYYY-MM-DD -> YYMMDD) for Skyscanner
+        const formatForSkyscanner = (dateStr) => {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const yy = String(d.getFullYear()).slice(-2);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yy}${mm}${dd}`;
+        };
+
+        const outStr = formatForSkyscanner(outbound);
+        const inStr = inbound ? formatForSkyscanner(inbound) : '';
+        
+        // Skyscanner URL (Origin: OKA, Dest: KTD)
+        let url = `https://www.skyscanner.jp/transport/flights/oka/ktd/${outStr}`;
+        if (inStr) {
+            url += `/${inStr}`;
+        }
+
+        const messageHtml = `
+            <div>
+                <p>日程を確認しました。<br>
+                往路: ${outbound}<br>
+                復路: ${inbound || '片道'}</p>
+                <div class="mt-4">
+                    <a href="${url}" target="_blank" class="block w-full text-center bg-[#00a698] hover:bg-[#008c80] text-white font-bold py-3 px-4 rounded-lg shadow transition">
+                        <i class="fas fa-plane mr-2"></i>Skyscannerで検索
+                    </a>
+                    <p class="text-xs text-gray-500 mt-2 text-center">※外部サイト（スカイスキャナー）へ移動します。<br>出発地は那覇(OKA)に設定されています。</p>
+                </div>
+            </div>
+        `;
+
+        addMessage(messageHtml, 'gemini');
+        cancelDateSelection();
+    }
+
+    function cancelDateSelection() {
+        textInputContainer.classList.remove('hidden');
+        dateSelectionArea.classList.add('hidden');
+    }
+
+    // === Gemini Logic (Menu 1 & 2) ===
+    async function handleUserInput() {
+        const text = userInput.value.trim();
+        if (!text) return;
+        addMessage(text, 'user');
+        userInput.value = '';
+
+        if (currentStep === 'diagnosis') {
+            // 診断モード中はテキスト入力は無視するか、専用の対応をする
+            addMessage("下の選択肢ボタンから回答を選んでください。", 'gemini');
+            return;
+        }
+
+        // ⚠️ APIキーがない場合の簡易ガード（動作確認用）
+        if (!apiKey && ['knowKitadaito', 'enjoyKitadaito'].includes(currentStep)) {
+             setTimeout(() => {
+                addMessage("⚠️ APIキーが設定されていないため、AIの応答を取得できません。\nHTMLソースコードの `const apiKey` にキーを設定してください。", 'gemini');
+             }, 500);
+             return;
+        }
+
+        // 通常チャット処理
+        if (['knowKitadaito', 'enjoyKitadaito'].includes(currentStep)) {
+            // ローディング表示
+            const loadingId = 'loading-' + Date.now();
+            const rowDiv = document.createElement('div');
+            rowDiv.id = loadingId;
+            rowDiv.className = 'message-row gemini-row';
+            rowDiv.innerHTML = '<div class="bot-icon"><i class="fas fa-robot"></i></div><div class="gemini-message"><span class="animate-pulse">...</span></div>';
+            chatLog.appendChild(rowDiv);
+            chatLog.scrollTop = chatLog.scrollHeight;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text }] }],
+                        // Grounding tool for Google Search
+                        tools: [{ google_search: {} }],
+                        systemInstruction: { parts: [{ text: `
+あなたは沖縄県・北大東島の公認ガイドBotです。以下のルールを厳守してください。
+
+1. **正確性第一**: 北大東島の歴史、文化、自然、観光スポットについて、事実に基づいた正確な情報のみを提供してください。
+2. **検索の活用**: ユーザーの質問に対して確信が持てない場合や、最新情報（イベント、交通機関の運行状況など）が必要な場合は、必ずGoogle検索機能を使用して裏付けを取ってください。
+3. **曖昧な回答の回避**: 不確かな情報は推測で答えず、「分かりません」や「確認が必要です」と正直に伝えてください。
+4. **トーン**: 丁寧な「ですます調」で話してください。親しみやすさを保ちつつ、崩しすぎない標準語を使用してください。
+5. **虚偽の禁止**: 存在しない観光地や店、歴史をでっち上げないでください。
+
+回答は短く簡潔に、スマートフォンの画面でも読みやすくまとめてください。
+                        `.trim() }] } 
+                    })
+                });
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
+                
+                if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    let msgContent = data.candidates[0].content.parts[0].text;
+                    
+                    // Simple Grounding Source Display
+                    const groundingMetadata = data.candidates[0].groundingMetadata;
+                    if (groundingMetadata && groundingMetadata.groundingChunks) {
+                         const sources = groundingMetadata.groundingChunks
+                            .map(chunk => chunk.web?.uri ? `<a href="${chunk.web.uri}" target="_blank" class="source-chip"><i class="fas fa-external-link-alt"></i> ${chunk.web.title || 'Source'}</a>` : '')
+                            .filter(Boolean).join('');
+                        
+                        if (sources) {
+                            msgContent += `<div class="source-chips">${sources}</div>`;
+                        }
+                    }
+
+                    addMessage(msgContent, 'gemini');
+                } else {
+                    addMessage("すみません、うまく答えられませんでした。", 'gemini');
+                }
+            } catch (e) {
+                if (document.getElementById(loadingId)) document.getElementById(loadingId).remove();
+                addMessage("エラーが発生しました。通信環境やAPIキーを確認してください。", 'gemini');
+                console.error(e);
+            }
+        }
+    }
+
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleUserInput();
+    });
+
+</script>
+</body>
+</html>
