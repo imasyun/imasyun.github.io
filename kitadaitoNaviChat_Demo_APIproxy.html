@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>うふあがり島NaviChat! α版 (診断機能付き)</title>
+    <title>うふあがり島NaviChat! α版 (Google Cloud版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -109,6 +109,7 @@
         <h1 class="text-lg font-bold">うふあがり島NaviChat! <span class="text-xs font-normal bg-white/20 px-2 py-0.5 rounded-full">α版</span></h1>
     </header>
     
+    <!-- メインメニュー (Menu Container) -->
     <div id="menuContainer" class="flex flex-col items-center justify-center space-y-6 h-full bg-white">
         <div class="text-center space-y-2 mb-4 px-4">
             <h2 class="text-xl font-bold text-gray-800">うふあがり島へ おじゃりやれ！</h2>
@@ -135,6 +136,7 @@
         </div>
     </div>
 
+    <!-- チャットインターフェース -->
     <div id="chatInterface" class="hidden flex-col flex-grow w-full h-full overflow-hidden">
         <div class="bg-white border-b border-gray-100 p-2 flex justify-between items-center text-xs text-gray-500 px-4">
             <span id="currentModeDisplay">モード: 情報検索</span>
@@ -145,16 +147,20 @@
 
         <div id="chatLog"></div>
 
+        <!-- 入力エリア -->
         <div id="inputAreaWrapper" class="bg-white p-4 border-t border-gray-200">
+            <!-- 通常テキスト入力 -->
             <div id="textInputContainer" class="flex w-full gap-2">
                 <input type="text" id="userInput" class="flex-grow p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="質問を入力...">
                 <button onclick="handleUserInput()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg flex-shrink-0"><i class="fas fa-paper-plane"></i></button>
             </div>
             
+            <!-- 診断モード中は入力を無効化するオーバーレイ的なメッセージ -->
             <div id="diagnosisInputMask" class="hidden text-center text-sm text-gray-400 py-2">
                 <i class="fas fa-lock mr-1"></i>選択肢から回答を選んでください
             </div>
 
+            <!-- 日付選択 (Menu 4用) -->
             <div id="dateSelectionArea" class="hidden w-full flex-col gap-3">
                 <p class="text-sm font-bold text-gray-700">日程を選択してください</p>
                 <div class="flex gap-2">
@@ -168,6 +174,7 @@
     </div>
 </div>
 
+<!-- ローディングオーバーレイ -->
 <div id="loadingOverlay" class="fixed inset-0 bg-white/90 z-50 hidden flex flex-col items-center justify-center">
     <div class="loader mb-4"></div>
     <p class="text-indigo-800 font-semibold animate-pulse" id="loadingText">メニューに戻っています...</p>
@@ -175,9 +182,9 @@
 
 <script>
     // === API & Config ===
-    // ⚠️ 注意: ここにGoogle GeminiのAPIキーを入力しないと、チャット機能は動作しません
-    // Google Cloud FunctionsのURLを設定（APIキーは不要です）
-    const API_URL = `https://ufuagarijimanavichat-api-proxy-19011109772.asia-northeast1.run.app/`;
+    // ⚠️重要⚠️: ここにGoogle Cloudで作成した関数URLを貼り付けてください
+    // 例: const API_URL = "https://gemini-proxy-xxxxx.a.run.app";
+    const API_URL = "https://ufuagarijimanavichat-api-proxy-19011109772.asia-northeast1.run.app"; 
 
     // === Constants (診断用データ) ===
     const LEVEL_QUESTIONS = [
@@ -534,17 +541,14 @@
         userInput.value = '';
 
         if (currentStep === 'diagnosis') {
-            // 診断モード中はテキスト入力は無視するか、専用の対応をする
             addMessage("下の選択肢ボタンから回答を選んでください。", 'gemini');
             return;
         }
 
-        // ⚠️ APIキーがない場合の簡易ガード（動作確認用）
-        if (!apiKey && ['knowKitadaito', 'enjoyKitadaito'].includes(currentStep)) {
-             setTimeout(() => {
-                addMessage("⚠️ APIキーが設定されていないため、AIの応答を取得できません。\nHTMLソースコードの `const apiKey` にキーを設定してください。", 'gemini');
-             }, 500);
-             return;
+        // ⚠️ バリデーション: URL設定チェック
+        if (!API_URL || API_URL === "") {
+            alert("⚠️ 設定エラー: API_URLが空です。\nHTMLファイルを編集して、Google Cloud FunctionsのURLを設定してください。");
+            return;
         }
 
         // 通常チャット処理
@@ -558,27 +562,42 @@
             chatLog.appendChild(rowDiv);
             chatLog.scrollTop = chatLog.scrollHeight;
 
+            console.log("Sending request to:", API_URL); // デバッグ用ログ
+
             try {
+                // 修正: リクエストから 'tools' (Google Search) を一旦除外してシンプルに送信
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{ parts: [{ text }] }],
-                        // Grounding tool for Google Search
-                        tools: [{ google_search: {} }],
+                        // tools: [{ google_search: {} }], // 一旦無効化
                         systemInstruction: { parts: [{ text: `
 あなたは沖縄県・北大東島の公認ガイドBotです。以下のルールを厳守してください。
-
 1. **正確性第一**: 北大東島の歴史、文化、自然、観光スポットについて、事実に基づいた正確な情報のみを提供してください。
 2. **検索の活用**: ユーザーの質問に対して確信が持てない場合や、最新情報（イベント、交通機関の運行状況など）が必要な場合は、必ずGoogle検索機能を使用して裏付けを取ってください。
 3. **曖昧な回答の回避**: 不確かな情報は推測で答えず、「分かりません」や「確認が必要です」と正直に伝えてください。
 4. **トーン**: 丁寧な「ですます調」で話してください。親しみやすさを保ちつつ、崩しすぎない標準語を使用してください。
 5. **虚偽の禁止**: 存在しない観光地や店、歴史をでっち上げないでください。
-
 回答は短く簡潔に、スマートフォンの画面でも読みやすくまとめてください。
                         `.trim() }] } 
                     })
                 });
+                
+                if (!response.ok) {
+                    // エラー詳細を取得する
+                    let errorDetail = `Server Error: ${response.status}`;
+                    try {
+                        const errData = await response.json();
+                        if (errData.error) errorDetail += `\n${errData.error}`;
+                        if (errData.details) errorDetail += `\n(${errData.details})`;
+                    } catch (e) {
+                        const text = await response.text();
+                        if (text) errorDetail += `\n${text}`;
+                    }
+                    throw new Error(errorDetail);
+                }
+
                 const data = await response.json();
                 document.getElementById(loadingId).remove();
                 
@@ -603,7 +622,7 @@
                 }
             } catch (e) {
                 if (document.getElementById(loadingId)) document.getElementById(loadingId).remove();
-                addMessage("エラーが発生しました。通信環境やAPIキーを確認してください。", 'gemini');
+                addMessage(`エラーが発生しました。\n${e.message}`, 'gemini');
                 console.error(e);
             }
         }
