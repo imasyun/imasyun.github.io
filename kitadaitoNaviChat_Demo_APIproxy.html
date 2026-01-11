@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>うふあがり島NaviChat! α版 (Google Cloud版)</title>
+    <title>うふあがり島NaviChat! α版 (Demo)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -18,7 +18,7 @@
         }
         
         .chat-container { 
-            width: 100%; max-width: 400px; height: 100vh; max-height: 800px;
+            width: 100%; max-width: 400px; height: 100vh; max-height: 750px; /* 高さを少し拡張 */
             background-color: #ffffff; display: flex; flex-direction: column;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; overflow: hidden;
         }
@@ -171,6 +171,17 @@
                 <button onclick="cancelDateSelection()" class="w-full bg-gray-200 text-gray-700 text-xs py-2 rounded-lg">キャンセル</button>
             </div>
         </div>
+
+        <!-- 外部リンク・アンケートエリア (簡略化版) -->
+        <div class="bg-gray-50 px-4 py-3 border-t border-gray-200">
+            <!-- アンケートボタン -->
+            <!-- ⚠️ アンケートURLが決まったら href="#" を href="https://forms.gle/..." などに書き換えてください -->
+            <a href="https://forms.gle/ZMRCQV5TJh7mZmKw8" target="_blank" class="flex items-center justify-center w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl text-center shadow-md transition group">
+                <i class="fas fa-clipboard-list mr-2 animate-bounce"></i>
+                <span>アンケートにご協力ください</span>
+                <i class="fas fa-external-link-alt ml-2 text-xs opacity-70"></i>
+            </a>
+        </div>
     </div>
 </div>
 
@@ -183,7 +194,6 @@
 <script>
     // === API & Config ===
     // ⚠️重要⚠️: ここにGoogle Cloudで作成した関数URLを貼り付けてください
-    // 例: const API_URL = "https://gemini-proxy-xxxxx.a.run.app";
     const API_URL = "https://ufuagarijimanavichat-api-proxy-19011109772.asia-northeast1.run.app"; 
 
     // === Constants (診断用データ) ===
