@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>うふあがり島NaviChat! α版 (Demo)</title>
+    <title>うふあがり島NaviChat! α版 (Google Cloud版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -18,7 +18,7 @@
         }
         
         .chat-container { 
-            width: 100%; max-width: 400px; height: 100vh; max-height: 750px; /* 高さを少し拡張 */
+            width: 100%; max-width: 400px; height: 100vh; max-height: 800px;
             background-color: #ffffff; display: flex; flex-direction: column;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; overflow: hidden;
         }
@@ -110,8 +110,7 @@
     </header>
     
     <!-- メインメニュー (Menu Container) -->
-    <!-- 変更: h-full を flex-1 に変更して、アンケートエリア表示時のレイアウト崩れを防止 -->
-    <div id="menuContainer" class="flex flex-col items-center justify-center space-y-6 flex-1 bg-white">
+    <div id="menuContainer" class="flex flex-col items-center justify-center space-y-6 h-full bg-white">
         <div class="text-center space-y-2 mb-4 px-4">
             <h2 class="text-xl font-bold text-gray-800">うふあがり島へ おじゃりやれ！</h2>
             <p class="text-sm text-gray-600">北大東島について、なんでも聞いてください。<br>知っている範囲でお答えします。</p>
@@ -138,8 +137,7 @@
     </div>
 
     <!-- チャットインターフェース -->
-    <!-- 変更: h-full を flex-1 に変更 -->
-    <div id="chatInterface" class="hidden flex-col flex-1 w-full overflow-hidden">
+    <div id="chatInterface" class="hidden flex-col flex-grow w-full h-full overflow-hidden">
         <div class="bg-white border-b border-gray-100 p-2 flex justify-between items-center text-xs text-gray-500 px-4">
             <span id="currentModeDisplay">モード: 情報検索</span>
             <button onclick="returnToMenuSequence()" class="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center">
@@ -174,17 +172,6 @@
             </div>
         </div>
     </div>
-
-    <!-- 外部リンク・アンケートエリア (chatInterfaceの外に移動、初期はhidden) -->
-    <div id="surveyContainer" class="hidden bg-gray-50 px-4 py-3 border-t border-gray-200">
-        <!-- アンケートボタン -->
-        <!-- ⚠️ アンケートURLが決まったら href="#" を href="https://forms.gle/..." などに書き換えてください -->
-        <a href="https://forms.gle/ZMRCQV5TJh7mZmKw8" target="_blank" class="flex items-center justify-center w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-xl text-center shadow-md transition group">
-            <i class="fas fa-clipboard-list mr-2 animate-bounce"></i>
-            <span>アンケートにご協力ください</span>
-            <i class="fas fa-external-link-alt ml-2 text-xs opacity-70"></i>
-        </a>
-    </div>
 </div>
 
 <!-- ローディングオーバーレイ -->
@@ -196,6 +183,7 @@
 <script>
     // === API & Config ===
     // ⚠️重要⚠️: ここにGoogle Cloudで作成した関数URLを貼り付けてください
+    // 例: const API_URL = "https://gemini-proxy-xxxxx.a.run.app";
     const API_URL = "https://ufuagarijimanavichat-api-proxy-19011109772.asia-northeast1.run.app"; 
 
     // === Constants (診断用データ) ===
@@ -272,14 +260,10 @@
 
     // === UI Functions ===
     function toggleChatMode(isChatting, modeName = "", isDiagnosis = false) {
-        const surveyContainer = document.getElementById('surveyContainer');
         if (isChatting) {
             menuContainer.classList.add('hidden');
             chatInterface.classList.remove('hidden');
             chatInterface.classList.add('flex');
-            
-            // チャットモードに入るときはアンケートを隠す
-            if(surveyContainer) surveyContainer.classList.add('hidden');
             
             // 入力エリア制御
             if (isDiagnosis) {
@@ -338,10 +322,6 @@
             currentStep = 'mainMenu';
             toggleChatMode(false);
             loadingOverlay.classList.add('hidden');
-            
-            // トップに戻った時にアンケートを表示
-            const surveyContainer = document.getElementById('surveyContainer');
-            if(surveyContainer) surveyContainer.classList.remove('hidden');
         }, 800);
     }
 
